@@ -123,7 +123,7 @@
       <button id="startStop">Start</button>
       <button id="reset" disabled>Reset</button>
     </div>
-    <p class="hint">ショートカット: <strong>Space</strong> 開始/停止 · <strong>R</strong> リセット</p>
+    <p class="hint">ショートカット: <strong>Space</strong> 開始 · <strong>R</strong> リセット</p>
   </div>
   <script>
   (function(){
@@ -250,47 +250,6 @@
       }, 1000);
     }
 
-    function pauseTimer() {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
-      isRunning = false;
-      startStopBtn.textContent = 'Start';
-      updateDisplay();
-    }
-
-    function resumeTimer() {
-      if (isRunning || remainingSeconds <= 0) return;
-      isRunning = true;
-      startStopBtn.textContent = 'Running...';
-      startStopBtn.disabled = true;
-      timerStartTime = Date.now() - (totalSeconds - remainingSeconds) * 1000;
-      
-      timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
-        remainingSeconds = Math.max(0, totalSeconds - elapsed);
-        updateDisplay();
-        
-        if (remainingSeconds <= 0) {
-          clearInterval(timerInterval);
-          timerInterval = null;
-          isRunning = false;
-          remainingSeconds = 0;
-          updateDisplay();
-          startStopBtn.textContent = 'Start';
-          startStopBtn.disabled = false;
-          countdownStarted = false;
-          // Play finish sound - longer and louder
-          try {
-            beep(800, 300, 0.2);
-            setTimeout(() => beep(800, 300, 0.2), 350);
-            setTimeout(() => beep(800, 600, 0.25), 700);
-          } catch (e) {}
-        }
-      }, 1000);
-    }
-
     startStopBtn.addEventListener('click', function(e) {
       if (!countdownStarted && remainingSeconds > 0) {
         startCountdown();
@@ -334,12 +293,8 @@
     document.addEventListener('keydown', function(e) {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (isRunning) {
-          pauseTimer();
-        } else {
-          if (!countdownStarted && totalSeconds > 0) {
-            startCountdown();
-          }
+        if (!countdownStarted && totalSeconds > 0) {
+          startCountdown();
         }
       } else if (e.code === 'KeyR') {
         e.preventDefault();
