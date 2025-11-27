@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>カウントダウンタイマー</title>
+  <title>タイマー</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     body {
@@ -112,7 +112,6 @@
   </head>
 <body>
   <div class="container">
-    <h1>カウントダウンタイマー</h1>
     <div id="display" class="display">00:00</div>
     <div class="controls">
       <button id="decrement" class="adjust-btn">−</button>
@@ -143,6 +142,7 @@
     let audioCtx = null;
     let countdownStarted = false;
     let timerStartTime = 0;  // timestamp when timer actually started
+    let isCountUpMode = false;  // true when initial value is 0 (count-up mode)
 
     function ensureAudio() {
       if (!audioCtx) {
@@ -182,12 +182,13 @@
       if (isRunning) return;
       totalSeconds = minutes * 60;
       remainingSeconds = totalSeconds;
+      isCountUpMode = (totalSeconds === 0);  // Set count-up mode if 0
       updateDisplay();
       updateTimeLabel();
     }
 
     function startCountdown() {
-      if (totalSeconds === 0) return;
+      if (totalSeconds === 0 && !isCountUpMode) return;
       if (isRunning) return;
 
       if (!countdownStarted) {
@@ -228,10 +229,19 @@
 
       timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
-        remainingSeconds = Math.max(0, totalSeconds - elapsed);
+        
+        if (isCountUpMode) {
+          // Count-up mode: increment from 0
+          remainingSeconds = elapsed;
+        } else {
+          // Count-down mode: decrement to 0
+          remainingSeconds = Math.max(0, totalSeconds - elapsed);
+        }
+        
         updateDisplay();
         
-        if (remainingSeconds <= 0) {
+        if (!isCountUpMode && remainingSeconds <= 0) {
+          // Countdown finished
           clearInterval(timerInterval);
           timerInterval = null;
           isRunning = false;
@@ -251,7 +261,7 @@
     }
 
     startStopBtn.addEventListener('click', function(e) {
-      if (!countdownStarted && remainingSeconds > 0) {
+      if (!countdownStarted && (remainingSeconds > 0 || isCountUpMode)) {
         startCountdown();
       }
     });
@@ -293,7 +303,7 @@
     document.addEventListener('keydown', function(e) {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (!countdownStarted && totalSeconds > 0) {
+        if (!countdownStarted && (totalSeconds > 0 || isCountUpMode)) {
           startCountdown();
         }
       } else if (e.code === 'KeyR') {
