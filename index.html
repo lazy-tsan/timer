@@ -142,6 +142,7 @@
     let timerInterval = null;
     let audioCtx = null;
     let countdownStarted = false;
+    let timerStartTime = 0;  // timestamp when timer actually started
 
     function ensureAudio() {
       if (!audioCtx) {
@@ -196,7 +197,6 @@
         incrementBtn.disabled = true;
         decrementBtn.disabled = true;
 
-        const origDisplay = display.textContent;
         let n = 3;
         display.textContent = String(n);
 
@@ -208,23 +208,27 @@
           } else {
             try { beep(1800, 520, 0.14); } catch (e) {}
             setTimeout(() => {
-              display.textContent = origDisplay;
-              startTimer();
+              remainingSeconds = totalSeconds;
+              updateDisplay();
+              startTimerNow();
             }, 250);
           }
         })(3);
       }
     }
 
-    function startTimer() {
+    function startTimerNow() {
       isRunning = true;
-      startStopBtn.textContent = 'Stop';
+      startStopBtn.textContent = 'Running...';
+      startStopBtn.disabled = true;
       resetBtn.disabled = false;
       incrementBtn.disabled = true;
       decrementBtn.disabled = true;
+      timerStartTime = Date.now();
 
       timerInterval = setInterval(() => {
-        remainingSeconds--;
+        const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+        remainingSeconds = Math.max(0, totalSeconds - elapsed);
         updateDisplay();
         
         if (remainingSeconds <= 0) {
@@ -234,6 +238,7 @@
           remainingSeconds = 0;
           updateDisplay();
           startStopBtn.textContent = 'Start';
+          startStopBtn.disabled = false;
           countdownStarted = false;
           // Play finish sound - longer and louder
           try {
@@ -252,17 +257,43 @@
       }
       isRunning = false;
       startStopBtn.textContent = 'Start';
+      updateDisplay();
+    }
+
+    function resumeTimer() {
+      if (isRunning || remainingSeconds <= 0) return;
+      isRunning = true;
+      startStopBtn.textContent = 'Running...';
+      startStopBtn.disabled = true;
+      timerStartTime = Date.now() - (totalSeconds - remainingSeconds) * 1000;
+      
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+        remainingSeconds = Math.max(0, totalSeconds - elapsed);
+        updateDisplay();
+        
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          isRunning = false;
+          remainingSeconds = 0;
+          updateDisplay();
+          startStopBtn.textContent = 'Start';
+          startStopBtn.disabled = false;
+          countdownStarted = false;
+          // Play finish sound - longer and louder
+          try {
+            beep(800, 300, 0.2);
+            setTimeout(() => beep(800, 300, 0.2), 350);
+            setTimeout(() => beep(800, 600, 0.25), 700);
+          } catch (e) {}
+        }
+      }, 1000);
     }
 
     startStopBtn.addEventListener('click', function(e) {
-      if (isRunning) {
-        pauseTimer();
-      } else {
-        if (!countdownStarted && remainingSeconds > 0) {
-          startCountdown();
-        } else if (countdownStarted && isRunning) {
-          // In case pause happened, allow resume
-        }
+      if (!countdownStarted && remainingSeconds > 0) {
+        startCountdown();
       }
     });
 
@@ -277,6 +308,7 @@
       updateDisplay();
       updateTimeLabel();
       startStopBtn.textContent = 'Start';
+      startStopBtn.disabled = false;
       resetBtn.disabled = true;
       incrementBtn.disabled = false;
       decrementBtn.disabled = false;

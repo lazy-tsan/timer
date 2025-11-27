@@ -1,15 +1,12 @@
 (() => {
   const display = document.getElementById('display');
-  const btnStartStop = document.getElementById('startStop');
-  const btnLap = document.getElementById('lap');
+  const btnStart = document.getElementById('start');
   const btnReset = document.getElementById('reset');
-  const lapsList = document.getElementById('laps');
 
   let running = false;
   let startPerf = 0; // performance.now when started
   let elapsedBefore = 0; // ms accumulated while paused
   let rafId = null;
-  const laps = [];
 
   // countdown state
   let countdownActive = false;
@@ -35,8 +32,7 @@
     if(running) return;
     running = true;
     startPerf = performance.now();
-    btnStartStop.textContent = 'Stop';
-    btnLap.disabled = false;
+    btnStart.textContent = 'Countdown';
     btnReset.disabled = false;
     rafId = requestAnimationFrame(update);
   }
@@ -47,7 +43,8 @@
     cancelAnimationFrame(rafId);
     const now = performance.now();
     elapsedBefore += now - startPerf;
-    btnStartStop.textContent = 'Start';
+    btnStart.textContent = 'Start';
+    update();
   }
 
   function reset(){
@@ -57,35 +54,16 @@
     cancelAnimationFrame(rafId);
     elapsedBefore = 0;
     startPerf = 0;
-    laps.length = 0;
-    renderLaps();
     display.textContent = '00:00.000';
-    btnLap.disabled = true;
     btnReset.disabled = true;
-    btnStartStop.textContent = 'Start';
+    btnStart.textContent = 'Start';
   }
 
-  function lap(){
-    const now = performance.now();
-    const elapsed = elapsedBefore + (running ? now - startPerf : 0);
-    laps.unshift(elapsed); // newest first
-    renderLaps();
-  }
 
-  function renderLaps(){
-    lapsList.innerHTML = '';
-    laps.forEach((t, i) =>{
-      const li = document.createElement('li');
-      li.textContent = `${laps.length - i}. ${formatTime(t)}`;
-      lapsList.appendChild(li);
-    });
-  }
-
-  btnStartStop.addEventListener('click', ()=>{
+  btnStart.addEventListener('click', ()=>{
     if(running) stop(); else start();
     update();
   });
-  btnLap.addEventListener('click', ()=>{ if(!btnLap.disabled) lap(); });
   btnReset.addEventListener('click', ()=>{ reset(); });
 
   // keyboard shortcuts
@@ -96,9 +74,6 @@
       if(countdownActive){ cancelCountdown(); return; }
       if(running) stop(); else beginStartCountdown(3);
       update();
-    }
-    if(e.key === 'l' || e.key === 'L'){
-      if(!btnLap.disabled) lap();
     }
     if(e.key === 'r' || e.key === 'R'){
       reset();
@@ -112,8 +87,7 @@
     // visual
     display.classList.add('countdown');
     display.textContent = String(countdownRemaining);
-    btnStartStop.textContent = 'Cancel';
-    btnLap.disabled = true;
+    btnStart.textContent = 'Cancel';
     btnReset.disabled = true;
 
     countdownInterval = setInterval(()=>{
@@ -142,8 +116,7 @@
       display.textContent = elapsedBefore > 0 ? formatTime(elapsedBefore) : '00:00.000';
     }
     // restore button label and states
-    btnStartStop.textContent = 'Start';
-    btnLap.disabled = true;
+    btnStart.textContent = 'Start';
     btnReset.disabled = elapsedBefore > 0 ? false : true;
   }
 
