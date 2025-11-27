@@ -1,0 +1,47 @@
+:root{
+  --bg:#0f1724;
+  --card:#0b1220;
+  --accent:#06b6d4;
+  --text:#e6eef6;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  background:linear-gradient(180deg,var(--bg),#071022);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+h1{margin:0 0 12px 0;font-size:20px}
+.display{
+  font-variant-numeric: tabular-nums;
+  font-size:48px;
+  text-align:center;
+  padding:18px 10px;
+  background:rgba(255,255,255,0.02);
+  border-radius:8px;
+  margin-bottom:12px;
+}
+
+.display.countdown{
+  color:#ff4d4f;
+  font-weight:800;
+  font-size:64px;
+}
+.controls{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+button{
+  padding:10px 14px;border-radius:8px;border:0;background:var(--card);color:var(--text);cursor:pointer;font-weight:600
+}
+button:disabled{opacity:0.45;cursor:not-allowed}
+.laps{max-height:220px;overflow:auto;background:transparent;padding:8px;border-radius:8px}
+.laps h2{margin:6px 0;font-size:14px}
+ol#laps{margin:0;padding-left:18px}
+.hint{font-size:13px;color:rgba(230,238,246,0.7);text-align:center;margin-top:12px}
+
+@media (max-width:420px){
+  .display{font-size:36px}
+}
