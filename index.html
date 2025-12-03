@@ -122,7 +122,9 @@
       <button id="startStop">Start</button>
       <button id="reset" disabled>Reset</button>
     </div>
-    <p class="hint">ショートカット: <strong>Space</strong> 開始 · <strong>R</strong> リセット</p>
+	<div>
+		<input class="preCount" type="checkbox" name="preCount" id="preCount" checked> 事前カウント
+	</div>
   </div>
   <script>
   (function(){
@@ -132,6 +134,7 @@
     const resetBtn = document.getElementById('reset');
     const incrementBtn = document.getElementById('increment');
     const decrementBtn = document.getElementById('decrement');
+	const preCountCheckbox = document.getElementById('preCount');
 
     if (!display || !timeLabel || !startStopBtn) return;
 
@@ -201,20 +204,27 @@
         let n = 3;
         display.textContent = String(n);
 
-        (function tick(count) {
-          if (count > 0) {
-            display.textContent = String(count);
-            try { beep(1000, 120); } catch (e) {}
-            setTimeout(() => tick(count - 1), 1000);
-          } else {
-            try { beep(1800, 520, 0.14); } catch (e) {}
-            setTimeout(() => {
-              remainingSeconds = totalSeconds;
-              updateDisplay();
-              startTimerNow();
-            }, 250);
-          }
-        })(3);
+		if (preCountCheckbox.checked) {
+			(function tick(count) {
+			if (count > 0) {
+				display.textContent = String(count);
+				try { beep(1000, 120); } catch (e) {}
+				setTimeout(() => tick(count - 1), 1000);
+			} else {
+				try { beep(1800, 520, 0.14); } catch (e) {}
+				setTimeout(() => {
+				remainingSeconds = totalSeconds;
+				updateDisplay();
+				startTimerNow();
+				}, 250);
+			}
+			})(3);
+		}
+		else {
+			remainingSeconds = totalSeconds;
+			updateDisplay();
+			startTimerNow();
+		}
       }
     }
 
