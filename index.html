@@ -281,7 +281,6 @@
         }
         isRunning = false;
         startStopBtn.textContent = 'Start';
-        startStopBtn.disabled = false;
         // ボタンは押したままにしてリセット可能
       } else if (countdownStarted) {
         // タイマー停止中：リセット
@@ -292,6 +291,7 @@
         resetBtn.disabled = true;
         incrementBtn.disabled = false;
         decrementBtn.disabled = false;
+	    startStopBtn.disabled = false;
       }
     });
 
