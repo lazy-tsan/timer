@@ -120,7 +120,7 @@
     </div>
     <div class="controls">
       <button id="startStop">Start</button>
-      <button id="reset" disabled>Reset</button>
+      <button id="reset" disabled>Stop/Reset</button>
     </div>
 	<div>
 		<input class="preCount" type="checkbox" name="preCount" id="preCount" checked> 事前カウント
@@ -250,16 +250,12 @@
         
         updateDisplay();
         
-        if (!isCountUpMode && remainingSeconds <= 0) {
-          // Countdown finished
-          clearInterval(timerInterval);
-          timerInterval = null;
-          isRunning = false;
+        if (!isCountUpMode && remainingSeconds <= 0 && !isCountUpMode) {
+          // Countdown finished, switch to count-up mode
+          isCountUpMode = true;
+          timerStartTime = Date.now();  // Reset timer start time for count-up
           remainingSeconds = 0;
           updateDisplay();
-          startStopBtn.textContent = 'Start';
-          startStopBtn.disabled = false;
-          countdownStarted = false;
           // Play finish sound - longer and louder
           try {
             beep(800, 300, 0.2);
@@ -277,20 +273,26 @@
     });
 
     resetBtn.addEventListener('click', function() {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
+      if (isRunning) {
+        // タイマー実行中：停止
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        isRunning = false;
+        startStopBtn.textContent = 'Start';
+        startStopBtn.disabled = false;
+        // ボタンは押したままにしてリセット可能
+      } else if (countdownStarted) {
+        // タイマー停止中：リセット
+        countdownStarted = false;
+        remainingSeconds = totalSeconds;
+        updateDisplay();
+        updateTimeLabel();
+        resetBtn.disabled = true;
+        incrementBtn.disabled = false;
+        decrementBtn.disabled = false;
       }
-      isRunning = false;
-      countdownStarted = false;
-      remainingSeconds = totalSeconds;
-      updateDisplay();
-      updateTimeLabel();
-      startStopBtn.textContent = 'Start';
-      startStopBtn.disabled = false;
-      resetBtn.disabled = true;
-      incrementBtn.disabled = false;
-      decrementBtn.disabled = false;
     });
 
     incrementBtn.addEventListener('click', function() {
