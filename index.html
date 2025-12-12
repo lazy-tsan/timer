@@ -253,6 +253,7 @@
         if (!isCountUpMode && remainingSeconds <= 0 && !isCountUpMode) {
           // Countdown finished, switch to count-up mode
           isCountUpMode = true;
+		  display.style.color = 'red';  // Change color to indicate count-up mode
           timerStartTime = Date.now();  // Reset timer start time for count-up
           remainingSeconds = 0;
           updateDisplay();
@@ -286,6 +287,7 @@
         // タイマー停止中：リセット
         countdownStarted = false;
         remainingSeconds = totalSeconds;
+		display.style.color = 'white';  // Reset color
         updateDisplay();
         updateTimeLabel();
         resetBtn.disabled = true;
