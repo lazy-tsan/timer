@@ -165,8 +165,8 @@ ol#laps{margin:0;padding-left:18px}
       <button id="increment" class="adjust-btn">+</button>
     </div>
     <div class="controls">
-      <button id="startStop">Start</button>
-      <button id="reset" disabled>Stop/Reset</button>
+      <button id="startStop">Start/Stop</button>
+      <button id="reset" disabled>Reset</button>
     </div>
 	<div>
 		<input class="preCount" type="checkbox" name="preCount" id="preCount" checked> 事前カウント
@@ -190,8 +190,12 @@ ol#laps{margin:0;padding-left:18px}
     let timerInterval = null;
     let audioCtx = null;
     let countdownStarted = false;
-    let timerStartTime = 0;  // timestamp when timer actually started
-    let isCountUpMode = false;  // true when initial value is 0 (count-up mode)
+    let timerStartTime = 0;
+    let elapsedBeforeRun = 0;
+    let runStartedAt = 0;
+    let stopEnabledTimeout = null;
+    let countdownTimeouts = [];
+    let isCountUpMode = false;
 
     function ensureAudio() {
       if (!audioCtx) {
@@ -236,6 +240,14 @@ ol#laps{margin:0;padding-left:18px}
       updateTimeLabel();
     }
 
+    function scheduleCountdown(callback, delay) {
+      const timeout = setTimeout(() => {
+        countdownTimeouts = countdownTimeouts.filter(id => id !== timeout);
+        callback();
+      }, delay);
+      countdownTimeouts.push(timeout);
+    }
+
     function startCountdown() {
       if (totalSeconds === 0 && !isCountUpMode) return;
       if (isRunning) return;
@@ -246,102 +258,132 @@ ol#laps{margin:0;padding-left:18px}
         ensureAudio();
         incrementBtn.disabled = true;
         decrementBtn.disabled = true;
+        resetBtn.disabled = true;
+        startStopBtn.disabled = true;
 
         let n = 3;
         display.textContent = String(n);
 
-		if (preCountCheckbox.checked) {
-			(function tick(count) {
-			if (count > 0) {
-				display.textContent = String(count);
-				try { beep(1000, 120); } catch (e) {}
-				setTimeout(() => tick(count - 1), 1000);
-			} else {
-				try { beep(1800, 520, 0.14); } catch (e) {}
-				setTimeout(() => {
-				remainingSeconds = totalSeconds;
-				updateDisplay();
-				startTimerNow();
-				}, 250);
-			}
-			})(3);
-		}
-		else {
-			remainingSeconds = totalSeconds;
-			updateDisplay();
-			startTimerNow();
-		}
+        if (preCountCheckbox.checked) {
+          (function tick(count) {
+            if (count > 0) {
+              display.textContent = String(count);
+              try { beep(1000, 120); } catch (e) {}
+              scheduleCountdown(() => tick(count - 1), 1000);
+            } else {
+              try { beep(1800, 520, 0.14); } catch (e) {}
+              scheduleCountdown(() => {
+                remainingSeconds = totalSeconds;
+                updateDisplay();
+                startTimerNow();
+              }, 250);
+            }
+          })(3);
+        } else {
+          remainingSeconds = totalSeconds;
+          updateDisplay();
+          startTimerNow();
+        }
+      } else {
+        startTimerNow();
+      }
+    }
+
+    function updateTimer() {
+      const elapsedSeconds = Math.floor(
+        (elapsedBeforeRun + Date.now() - timerStartTime) / 1000
+      );
+
+      if (isCountUpMode) {
+        remainingSeconds = elapsedSeconds;
+      } else {
+        remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+      }
+
+      updateDisplay();
+
+      if (!isCountUpMode && remainingSeconds <= 0) {
+        isCountUpMode = true;
+        display.style.color = 'red';
+        elapsedBeforeRun = 0;
+        timerStartTime = Date.now();
+        remainingSeconds = 0;
+        updateDisplay();
+        try {
+          beep(800, 300, 0.2);
+          setTimeout(() => beep(800, 300, 0.2), 350);
+          setTimeout(() => beep(800, 600, 0.25), 700);
+        } catch (e) {}
       }
     }
 
     function startTimerNow() {
       isRunning = true;
-      startStopBtn.textContent = 'Running...';
+      startStopBtn.textContent = 'Stop';
       startStopBtn.disabled = true;
-      resetBtn.disabled = false;
+      resetBtn.disabled = true;
       incrementBtn.disabled = true;
       decrementBtn.disabled = true;
       timerStartTime = Date.now();
-
-      timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
-        
-        if (isCountUpMode) {
-          // Count-up mode: increment from 0
-          remainingSeconds = elapsed;
-        } else {
-          // Count-down mode: decrement to 0
-          remainingSeconds = Math.max(0, totalSeconds - elapsed);
-        }
-        
-        updateDisplay();
-        
-        if (!isCountUpMode && remainingSeconds <= 0 && !isCountUpMode) {
-          // Countdown finished, switch to count-up mode
-          isCountUpMode = true;
-		  display.style.color = 'red';  // Change color to indicate count-up mode
-          timerStartTime = Date.now();  // Reset timer start time for count-up
-          remainingSeconds = 0;
-          updateDisplay();
-          // Play finish sound - longer and louder
-          try {
-            beep(800, 300, 0.2);
-            setTimeout(() => beep(800, 300, 0.2), 350);
-            setTimeout(() => beep(800, 600, 0.25), 700);
-          } catch (e) {}
-        }
-      }, 1000);
+      runStartedAt = timerStartTime;
+      timerInterval = setInterval(updateTimer, 100);
+      stopEnabledTimeout = setTimeout(() => {
+        stopEnabledTimeout = null;
+        if (isRunning) startStopBtn.disabled = false;
+      }, 2000);
     }
 
-    startStopBtn.addEventListener('click', function(e) {
-      if (!countdownStarted && (remainingSeconds > 0 || isCountUpMode)) {
+    function stopTimer() {
+      if (!isRunning || Date.now() - runStartedAt < 2000) return;
+      updateTimer();
+      elapsedBeforeRun += Date.now() - timerStartTime;
+      clearInterval(timerInterval);
+      timerInterval = null;
+      if (stopEnabledTimeout !== null) {
+        clearTimeout(stopEnabledTimeout);
+        stopEnabledTimeout = null;
+      }
+      isRunning = false;
+      startStopBtn.textContent = 'Start/Stop';
+      startStopBtn.disabled = false;
+      resetBtn.disabled = false;
+    }
+
+    function resetTimer() {
+      if (timerInterval !== null) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      if (stopEnabledTimeout !== null) {
+        clearTimeout(stopEnabledTimeout);
+        stopEnabledTimeout = null;
+      }
+      countdownTimeouts.forEach(clearTimeout);
+      countdownTimeouts = [];
+      isRunning = false;
+      countdownStarted = false;
+      elapsedBeforeRun = 0;
+      startStopBtn.textContent = 'Start/Stop';
+      startStopBtn.disabled = false;
+      incrementBtn.disabled = false;
+      decrementBtn.disabled = false;
+      resetBtn.disabled = true;
+      display.style.color = 'white';
+      remainingSeconds = totalSeconds;
+      updateDisplay();
+      updateTimeLabel();
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        stopTimer();
+      } else if (!countdownStarted || elapsedBeforeRun > 0) {
         startCountdown();
       }
-    });
+    }
 
-    resetBtn.addEventListener('click', function() {
-      if (isRunning) {
-        // タイマー実行中：停止
-        if (timerInterval) {
-          clearInterval(timerInterval);
-          timerInterval = null;
-        }
-        isRunning = false;
-        startStopBtn.textContent = 'Start';
-        // ボタンは押したままにしてリセット可能
-      } else if (countdownStarted) {
-        // タイマー停止中：リセット
-        countdownStarted = false;
-        remainingSeconds = totalSeconds;
-		display.style.color = 'white';  // Reset color
-        updateDisplay();
-        updateTimeLabel();
-        resetBtn.disabled = true;
-        incrementBtn.disabled = false;
-        decrementBtn.disabled = false;
-	    startStopBtn.disabled = false;
-      }
-    });
+    startStopBtn.addEventListener('click', toggleTimer);
+    resetBtn.addEventListener('click', resetTimer);
 
     incrementBtn.addEventListener('click', function() {
       if (!isRunning) {
@@ -361,14 +403,17 @@ ol#laps{margin:0;padding-left:18px}
 
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        if (!countdownStarted && (totalSeconds > 0 || isCountUpMode)) {
-          startCountdown();
+      if (e.code === 'Space' && !e.repeat) {
+        const target = e.target;
+        if (target instanceof HTMLElement &&
+            (target.isContentEditable || target.matches('button, input, select, textarea'))) {
+          return;
         }
+        e.preventDefault();
+        toggleTimer();
       } else if (e.code === 'KeyR') {
         e.preventDefault();
-        resetBtn.click();
+        resetTimer();
       }
     });
 
@@ -378,4 +423,3 @@ ol#laps{margin:0;padding-left:18px}
   </script>
 </body>
 </html>
-
